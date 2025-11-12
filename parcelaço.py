@@ -33,6 +33,59 @@ def valor_presente(fluxo_dict, taxa_mensal, data_focal=0):
     return vp
 
 # ------------------------------
+# Preparar session_state para sincronização input <-> slider
+# ------------------------------
+# Modelo 1
+st.session_state.setdefault('last_changed_taxa_anual_m1', None)
+st.session_state.setdefault('last_changed_taxa_mensal_m1', None)
+st.session_state.setdefault('taxa_anual_m1', 15.0)
+st.session_state.setdefault('taxa_anual_slider_m1', 15.0)
+st.session_state.setdefault('taxa_mensal_manual_m1', 1.17)
+st.session_state.setdefault('taxa_mensal_slider_m1', 1.17)
+
+# Modelo 2
+st.session_state.setdefault('last_changed_taxa_anual_m2', None)
+st.session_state.setdefault('last_changed_taxa_mensal_m2', None)
+st.session_state.setdefault('taxa_anual_m2', 15.0)
+st.session_state.setdefault('taxa_anual_slider_m2', 15.0)
+st.session_state.setdefault('taxa_mensal_manual_m2', 0.80)
+st.session_state.setdefault('taxa_mensal_slider_m2', 0.80)
+
+# Callbacks Modelo 1
+def on_change_taxa_anual_input_m1():
+    st.session_state['last_changed_taxa_anual_m1'] = 'input'
+    st.session_state['taxa_anual_slider_m1'] = float(st.session_state['taxa_anual_m1'])
+
+def on_change_taxa_anual_slider_m1():
+    st.session_state['last_changed_taxa_anual_m1'] = 'slider'
+    st.session_state['taxa_anual_m1'] = float(st.session_state['taxa_anual_slider_m1'])
+
+def on_change_taxa_mensal_input_m1():
+    st.session_state['last_changed_taxa_mensal_m1'] = 'input'
+    st.session_state['taxa_mensal_slider_m1'] = float(st.session_state['taxa_mensal_manual_m1'])
+
+def on_change_taxa_mensal_slider_m1():
+    st.session_state['last_changed_taxa_mensal_m1'] = 'slider'
+    st.session_state['taxa_mensal_manual_m1'] = float(st.session_state['taxa_mensal_slider_m1'])
+
+# Callbacks Modelo 2
+def on_change_taxa_anual_input_m2():
+    st.session_state['last_changed_taxa_anual_m2'] = 'input'
+    st.session_state['taxa_anual_slider_m2'] = float(st.session_state['taxa_anual_m2'])
+
+def on_change_taxa_anual_slider_m2():
+    st.session_state['last_changed_taxa_anual_m2'] = 'slider'
+    st.session_state['taxa_anual_m2'] = float(st.session_state['taxa_anual_slider_m2'])
+
+def on_change_taxa_mensal_input_m2():
+    st.session_state['last_changed_taxa_mensal_m2'] = 'input'
+    st.session_state['taxa_mensal_slider_m2'] = float(st.session_state['taxa_mensal_manual_m2'])
+
+def on_change_taxa_mensal_slider_m2():
+    st.session_state['last_changed_taxa_mensal_m2'] = 'slider'
+    st.session_state['taxa_mensal_manual_m2'] = float(st.session_state['taxa_mensal_slider_m2'])
+
+# ------------------------------
 # BLOCO MODELO 1 (mantido com gráficos e HUD originais)
 # ------------------------------
 if modo.startswith("Modelo 1"):
@@ -74,32 +127,51 @@ if modo.startswith("Modelo 1"):
 
     taxa_anual = None
     taxa_mensal_manual = None
-    taxa_mensal_final = None
+    taxa_mensal_final = 0.0
 
     if taxa_opcao in ["SELIC (anual)", "CDI (anual)"]:
+        # number_input and slider kept in sync; last user action decides
         taxa_anual = st.number_input(
             f"Informe a taxa anual para {taxa_opcao.split()[0]} (%)",
-    min_value=0.0, max_value=200.0, value=(float(taxa_anual)) if taxa_anual != None else 15.0, step=0.01, format="%.4f", key="taxa_anual_m1"
+            min_value=0.0, max_value=200.0,
+            value=float(st.session_state.get('taxa_anual_m1', 15.0)),
+            step=0.01, format="%.4f",
+            key="taxa_anual_m1", on_change=on_change_taxa_anual_input_m1
         )
         taxa_anual_slider = st.slider(
             "Ajuste rápido da taxa anual (%)",
-            min_value=0.0, max_value=200.0, value=float(taxa_anual), step=0.01, key="taxa_anual_slider_m1"
+            min_value=0.0, max_value=200.0,
+            value=float(st.session_state.get('taxa_anual_slider_m1', float(taxa_anual))),
+            step=0.01, key="taxa_anual_slider_m1", on_change=on_change_taxa_anual_slider_m1
         )
-        if taxa_anual_slider != float(taxa_anual):
-            taxa_anual = taxa_anual_slider
-        taxa_mensal_final = convert_annual_to_monthly_effective(taxa_anual)
+        last = st.session_state.get('last_changed_taxa_anual_m1')
+        if last == 'slider':
+            taxa_anual_usada = float(st.session_state['taxa_anual_slider_m1'])
+        else:
+            taxa_anual_usada = float(st.session_state['taxa_anual_m1'])
+        taxa_mensal_final = convert_annual_to_monthly_effective(taxa_anual_usada)
+        taxa_anual = taxa_anual_usada
     else:
         taxa_mensal_manual = st.number_input(
             "Informe a taxa mensal (%) (valor efetivo por mês)",
-            min_value=0.0, max_value=100.0, value=(float(taxa_mensal_manual)) if taxa_mensal_manual != None else 1.17, step=0.01, format="%.4f", key="taxa_mensal_manual_m1"
+            min_value=0.0, max_value=100.0,
+            value=float(st.session_state.get('taxa_mensal_manual_m1', 1.17)),
+            step=0.01, format="%.4f",
+            key="taxa_mensal_manual_m1", on_change=on_change_taxa_mensal_input_m1
         )
         taxa_mensal_slider = st.slider(
             "Ajuste rápido da taxa mensal (%) - Modelo 1",
-            min_value=0.0, max_value=100.0, value=float(taxa_mensal_manual), step=0.01, key="taxa_mensal_slider_m1"
+            min_value=0.0, max_value=100.0,
+            value=float(st.session_state.get('taxa_mensal_slider_m1', float(taxa_mensal_manual))),
+            step=0.01, key="taxa_mensal_slider_m1", on_change=on_change_taxa_mensal_slider_m1
         )
-        if taxa_mensal_slider != float(taxa_mensal_manual):
-            taxa_mensal_manual = taxa_mensal_slider
-        taxa_mensal_final = (taxa_mensal_manual or 0.0) / 100.0
+        last_m = st.session_state.get('last_changed_taxa_mensal_m1')
+        if last_m == 'slider':
+            taxa_mensal_percent_usada = float(st.session_state['taxa_mensal_slider_m1'])
+        else:
+            taxa_mensal_percent_usada = float(st.session_state['taxa_mensal_manual_m1'])
+        taxa_mensal_final = taxa_mensal_percent_usada / 100.0
+        taxa_mensal_manual = taxa_mensal_percent_usada
 
     # Resumo Modelo 1
     st.markdown("### Resumo das entradas (Modelo 1)")
@@ -110,10 +182,10 @@ if modo.startswith("Modelo 1"):
     if tem_desconto_vista:
         st.write(f"- **Desconto à vista:** {desconto_pct:.2f} % → Preço à vista com desconto: R$ {valor_a_vista * (1 - desconto_pct / 100.0):.2f}")
     st.write(f"- **Tipo de taxa selecionada:** {taxa_opcao}")
-    if taxa_anual is not None:
-        st.write(f"- **Taxa anual informada:** {taxa_anual:.4f} %")
-    if taxa_mensal_manual is not None:
-        st.write(f"- **Taxa mensal informada (manual):** {taxa_mensal_manual:.4f} %")
+    if taxa_opcao in ["SELIC (anual)", "CDI (anual)"]:
+        st.write(f"- **Taxa anual usada:** {taxa_anual:.4f} %")
+    else:
+        st.write(f"- **Taxa mensal usada (manual):** {taxa_mensal_manual:.4f} %")
     st.write(f"- **Taxa mensal efetiva usada nas comparações:** {taxa_mensal_final * 100:.6f} %")
 
     st.divider()
@@ -245,11 +317,11 @@ if modo.startswith("Modelo 1"):
         pct = (diff / vp_total_vista * 100.0) if vp_total_vista != 0 else float('inf')
         st.write(f"Diferença (parcelado - vista com desconto): R$ {diff:.2f} ({pct:.2f} %)")
         diferenca = (valor_a_vista - vp_total)
-        desc = (diferenca/ valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
+        desc = (diferenca / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
         st.write(f'Diferença (Preço original - VP Parcelado): R$ {diferenca:.2f} ({desc:.2f} %)')
 
 # ------------------------------
-# BLOCO MODELO 2 (substitua/inserir apenas este bloco se desejado)
+# BLOCO MODELO 2
 # ------------------------------
 else:
     st.header("Configurações - Modelo 2 (Valor Presente por prestação)")
@@ -292,32 +364,48 @@ else:
 
     taxa_anual2 = None
     taxa_mensal_manual2 = None
-    taxa_mensal_final2 = None
+    taxa_mensal_final2 = 0.0
 
     if taxa_opcao2 in ["SELIC (anual)", "CDI (anual)"]:
         taxa_anual2 = st.number_input(
             f"Informe a taxa anual para {taxa_opcao2.split()[0]} (%)",
-            min_value=0.0, max_value=200.0, value=(float(taxa_anual2)) if taxa_anual2 != None else 15.0, step=0.01, format="%.4f", key="taxa_anual_m2"
+            min_value=0.0, max_value=200.0,
+            value=float(st.session_state.get('taxa_anual_m2', 15.0)),
+            step=0.01, format="%.4f", key="taxa_anual_m2", on_change=on_change_taxa_anual_input_m2
         )
         taxa_anual_slider2 = st.slider(
             "Ajuste rápido da taxa anual (%)",
-            min_value=0.0, max_value=200.0, value=float(taxa_anual2), step=0.01, key="taxa_anual_slider_m2"
+            min_value=0.0, max_value=200.0,
+            value=float(st.session_state.get('taxa_anual_slider_m2', float(taxa_anual2))),
+            step=0.01, key="taxa_anual_slider_m2", on_change=on_change_taxa_anual_slider_m2
         )
-        if taxa_anual_slider2 != float(taxa_anual2):
-            taxa_anual2 = taxa_anual_slider2
-        taxa_mensal_final2 = convert_annual_to_monthly_effective(taxa_anual2)
+        last2 = st.session_state.get('last_changed_taxa_anual_m2')
+        if last2 == 'slider':
+            taxa_anual_usada2 = float(st.session_state['taxa_anual_slider_m2'])
+        else:
+            taxa_anual_usada2 = float(st.session_state['taxa_anual_m2'])
+        taxa_mensal_final2 = convert_annual_to_monthly_effective(taxa_anual_usada2)
+        taxa_anual2 = taxa_anual_usada2
     else:
         taxa_mensal_manual2 = st.number_input(
             "Informe a taxa mensal efetiva (%) - Modelo 2",
-            min_value=0.0, max_value=100.0, value=(float(taxa_mensal_manual2)) if taxa_mensal_manual2 != None else 0.8, step=0.01, format="%.4f", key="taxa_mensal_manual_m2"
+            min_value=0.0, max_value=100.0,
+            value=float(st.session_state.get('taxa_mensal_manual_m2', 0.80)),
+            step=0.01, format="%.4f", key="taxa_mensal_manual_m2", on_change=on_change_taxa_mensal_input_m2
         )
         taxa_mensal_slider2 = st.slider(
             "Ajuste rápido da taxa mensal (%) - Modelo 2",
-            min_value=0.0, max_value=100.0, value=float(taxa_mensal_manual2), step=0.01, key="taxa_mensal_slider_m2"
+            min_value=0.0, max_value=100.0,
+            value=float(st.session_state.get('taxa_mensal_slider_m2', float(taxa_mensal_manual2))),
+            step=0.01, key="taxa_mensal_slider_m2", on_change=on_change_taxa_mensal_slider_m2
         )
-        if taxa_mensal_slider2 != float(taxa_mensal_manual2):
-            taxa_mensal_manual2 = taxa_mensal_slider2
-        taxa_mensal_final2 = (taxa_mensal_manual2 or 0.0) / 100.0
+        last_m2 = st.session_state.get('last_changed_taxa_mensal_m2')
+        if last_m2 == 'slider':
+            taxa_mensal_percent_usada2 = float(st.session_state['taxa_mensal_slider_m2'])
+        else:
+            taxa_mensal_percent_usada2 = float(st.session_state['taxa_mensal_manual_m2'])
+        taxa_mensal_final2 = taxa_mensal_percent_usada2 / 100.0
+        taxa_mensal_manual2 = taxa_mensal_percent_usada2
 
     # Resumo Modelo 2
     st.markdown("### Resumo das entradas")
@@ -328,10 +416,10 @@ else:
     st.write(f"- **Entrada no período 0 (opcional):** R$ {entrada_inicial2:.2f}")
     st.write(f"- **Número máximo de prestações (limite):** {int(num_prestacoes_max2)}")
     st.write(f"- **Tipo de taxa selecionada:** {taxa_opcao2}")
-    if taxa_anual2 is not None:
-        st.write(f"- **Taxa anual informada:** {taxa_anual2:.4f} %")
-    if taxa_mensal_manual2 is not None:
-        st.write(f"- **Taxa mensal informada (manual):** {taxa_mensal_manual2:.4f} %")
+    if taxa_opcao2 in ["SELIC (anual)", "CDI (anual)"]:
+        st.write(f"- **Taxa anual usada:** {taxa_anual2:.4f} %")
+    else:
+        st.write(f"- **Taxa mensal usada (manual):** {taxa_mensal_manual2:.4f} %")
     st.write(f"- **Taxa mensal efetiva usada nas comparações (Modelo 2):** {(taxa_mensal_final2 or 0.0) * 100:.6f} %")
 
     st.markdown("---")
@@ -342,7 +430,7 @@ else:
         "Escolha o número de prestações atual",
         min_value=1,
         max_value=int(num_prestacoes_max2),
-        value=min(1, int(num_prestacoes_max2)),
+        value=min(6, int(num_prestacoes_max2)),
         step=1,
         key="n_atual_m2"
     )
