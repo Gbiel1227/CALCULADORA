@@ -79,7 +79,7 @@ if modo.startswith("Modelo 1"):
     if taxa_opcao in ["SELIC (anual)", "CDI (anual)"]:
         taxa_anual = st.number_input(
             f"Informe a taxa anual para {taxa_opcao.split()[0]} (%)",
-            min_value=0.0, max_value=200.0, value=15.0, step=0.01, format="%.4f", key="taxa_anual_m1"
+    min_value=0.0, max_value=200.0, value=(float(taxa_anual)) if taxa_anual != None else 15.0, step=0.01, format="%.4f", key="taxa_anual_m1"
         )
         taxa_anual_slider = st.slider(
             "Ajuste rápido da taxa anual (%)",
@@ -91,7 +91,7 @@ if modo.startswith("Modelo 1"):
     else:
         taxa_mensal_manual = st.number_input(
             "Informe a taxa mensal (%) (valor efetivo por mês)",
-            min_value=0.0, max_value=100.0, value=0.80, step=0.01, format="%.4f", key="taxa_mensal_manual_m1"
+            min_value=0.0, max_value=100.0, value=(float(taxa_mensal_manual)) if taxa_mensal_manual != None else 1.17, step=0.01, format="%.4f", key="taxa_mensal_manual_m1"
         )
         taxa_mensal_slider = st.slider(
             "Ajuste rápido da taxa mensal (%) - Modelo 1",
@@ -297,7 +297,7 @@ else:
     if taxa_opcao2 in ["SELIC (anual)", "CDI (anual)"]:
         taxa_anual2 = st.number_input(
             f"Informe a taxa anual para {taxa_opcao2.split()[0]} (%)",
-            min_value=0.0, max_value=200.0, value=10.0, step=0.01, format="%.4f", key="taxa_anual_m2"
+            min_value=0.0, max_value=200.0, value=(float(taxa_anual2)) if taxa_anual2 != None else 15.0, step=0.01, format="%.4f", key="taxa_anual_m2"
         )
         taxa_anual_slider2 = st.slider(
             "Ajuste rápido da taxa anual (%)",
@@ -306,11 +306,10 @@ else:
         if taxa_anual_slider2 != float(taxa_anual2):
             taxa_anual2 = taxa_anual_slider2
         taxa_mensal_final2 = convert_annual_to_monthly_effective(taxa_anual2)
-        taxa_anual_slider2 = taxa_anual2
     else:
         taxa_mensal_manual2 = st.number_input(
             "Informe a taxa mensal efetiva (%) - Modelo 2",
-            min_value=0.0, max_value=100.0, value=0.80, step=0.01, format="%.4f", key="taxa_mensal_manual_m2"
+            min_value=0.0, max_value=100.0, value=(float(taxa_mensal_manual2)) if taxa_mensal_manual2 != None else 0.8, step=0.01, format="%.4f", key="taxa_mensal_manual_m2"
         )
         taxa_mensal_slider2 = st.slider(
             "Ajuste rápido da taxa mensal (%) - Modelo 2",
@@ -457,5 +456,4 @@ else:
     st.write(f"Diferença (parcelado - vista): R$ {diff2:.2f} ({pct2:.2f} %)")
     diferenca2 = valor_a_vista2 - vp_parcelado_data0
     desc2 = (diferenca2 / valor_a_vista2 * 100.0) if valor_a_vista2 != 0 else float("inf")
-
     st.write(f"Diferença (preço original - VP parcelado): R$ {diferenca2:.2f} ({desc2:.2f} %)")
