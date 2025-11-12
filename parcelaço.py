@@ -306,6 +306,7 @@ else:
         if taxa_anual_slider2 != float(taxa_anual2):
             taxa_anual2 = taxa_anual_slider2
         taxa_mensal_final2 = convert_annual_to_monthly_effective(taxa_anual2)
+        taxa_anual_slider2 = taxa_anual2
     else:
         taxa_mensal_manual2 = st.number_input(
             "Informe a taxa mensal efetiva (%) - Modelo 2",
@@ -456,4 +457,5 @@ else:
     st.write(f"Diferença (parcelado - vista): R$ {diff2:.2f} ({pct2:.2f} %)")
     diferenca2 = valor_a_vista2 - vp_parcelado_data0
     desc2 = (diferenca2 / valor_a_vista2 * 100.0) if valor_a_vista2 != 0 else float("inf")
+
     st.write(f"Diferença (preço original - VP parcelado): R$ {diferenca2:.2f} ({desc2:.2f} %)")
