@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 import pandas as pd
 
 st.set_page_config(layout="wide")
-st.title("💸 Comparador Pagamento À Vista vs Parcelado (Protótipo)")
+st.title("💸À Vista vs Parcelado (Protótipo)")
 
 # ------------------------------
 # Escolha do modo (Modelo 1 ou Modelo 2)
@@ -33,25 +33,36 @@ def valor_presente(fluxo_dict, taxa_mensal, data_focal=0):
     return vp
 
 # ------------------------------
-# Preparar session_state para sincronização input <-> slider
+# Inicializações de session_state (valores padrão)
 # ------------------------------
-# Modelo 1
-st.session_state.setdefault('last_changed_taxa_anual_m1', None)
-st.session_state.setdefault('last_changed_taxa_mensal_m1', None)
 st.session_state.setdefault('taxa_anual_m1', 15.0)
 st.session_state.setdefault('taxa_anual_slider_m1', 15.0)
 st.session_state.setdefault('taxa_mensal_manual_m1', 1.17)
 st.session_state.setdefault('taxa_mensal_slider_m1', 1.17)
+st.session_state.setdefault('last_changed_taxa_anual_m1', None)
+st.session_state.setdefault('last_changed_taxa_mensal_m1', None)
 
-# Modelo 2
-st.session_state.setdefault('last_changed_taxa_anual_m2', None)
-st.session_state.setdefault('last_changed_taxa_mensal_m2', None)
 st.session_state.setdefault('taxa_anual_m2', 15.0)
 st.session_state.setdefault('taxa_anual_slider_m2', 15.0)
 st.session_state.setdefault('taxa_mensal_manual_m2', 0.80)
 st.session_state.setdefault('taxa_mensal_slider_m2', 0.80)
+st.session_state.setdefault('last_changed_taxa_anual_m2', None)
+st.session_state.setdefault('last_changed_taxa_mensal_m2', None)
 
-# Callbacks Modelo 1
+# Para desconto (Modelo 1)
+st.session_state.setdefault('last_changed_desconto_m1', None)
+st.session_state.setdefault('desconto_pct_m1', 5.0)
+# preco_vista_descontado_m1 inicial será calculado quando for necessário usando valor_a_vista_m1
+st.session_state.setdefault('preco_vista_descontado_m1', None)
+
+# Para desconto (Modelo 2)
+st.session_state.setdefault('last_changed_desconto_m2', None)
+st.session_state.setdefault('desconto_pct_m2', 5.0)
+st.session_state.setdefault('preco_vista_descontado_m2', None)
+
+# ------------------------------
+# Callbacks para sincronização input <-> slider (Modelo 1)
+# ------------------------------
 def on_change_taxa_anual_input_m1():
     st.session_state['last_changed_taxa_anual_m1'] = 'input'
     st.session_state['taxa_anual_slider_m1'] = float(st.session_state['taxa_anual_m1'])
@@ -68,7 +79,34 @@ def on_change_taxa_mensal_slider_m1():
     st.session_state['last_changed_taxa_mensal_m1'] = 'slider'
     st.session_state['taxa_mensal_manual_m1'] = float(st.session_state['taxa_mensal_slider_m1'])
 
-# Callbacks Modelo 2
+# Callbacks para desconto (Modelo 1)
+def on_change_desconto_pct_m1():
+    # usuário editou percentual -> recalcular preco descontado e gravar apenas a chave do preco descontado
+    st.session_state['last_changed_desconto_m1'] = 'pct'
+    preco_orig = float(st.session_state.get('valor_a_vista_m1', 0.0))
+    pct = float(st.session_state.get('desconto_pct_m1', 0.0))
+    pct = max(0.0, min(100.0, pct))
+    preco_desc = preco_orig * (1 - pct / 100.0) if preco_orig > 0 else 0.0
+    # Atualizar apenas a chave do preço descontado (permitido no callback)
+    st.session_state['preco_vista_descontado_m1'] = round(preco_desc, 2)
+    st.session_state['desconto_pct_m1'] = round(pct, 4)
+
+def on_change_preco_vista_descontado_m1():
+    # usuário editou preço descontado -> recalcular percentual e gravar somente a chave percentual
+    st.session_state['last_changed_desconto_m1'] = 'preco'
+    preco_orig = float(st.session_state.get('valor_a_vista_m1', 0.0))
+    preco_desc = float(st.session_state.get('preco_vista_descontado_m1', 0.0))
+    preco_desc = max(0.0, preco_desc)
+    if preco_orig > 0 and preco_desc > preco_orig:
+        preco_desc = preco_orig
+    pct = (1 - (preco_desc / preco_orig)) * 100.0 if preco_orig > 0 else 0.0
+    pct = max(0.0, min(100.0, pct))
+    st.session_state['desconto_pct_m1'] = round(pct, 4)
+    st.session_state['preco_vista_descontado_m1'] = round(preco_desc, 2)
+
+# ------------------------------
+# Callbacks Modelo 2 (taxas e desconto)
+# ------------------------------
 def on_change_taxa_anual_input_m2():
     st.session_state['last_changed_taxa_anual_m2'] = 'input'
     st.session_state['taxa_anual_slider_m2'] = float(st.session_state['taxa_anual_m2'])
@@ -85,6 +123,27 @@ def on_change_taxa_mensal_slider_m2():
     st.session_state['last_changed_taxa_mensal_m2'] = 'slider'
     st.session_state['taxa_mensal_manual_m2'] = float(st.session_state['taxa_mensal_slider_m2'])
 
+def on_change_desconto_pct_m2():
+    st.session_state['last_changed_desconto_m2'] = 'pct'
+    preco_orig = float(st.session_state.get('valor_a_vista_m2', 0.0))
+    pct = float(st.session_state.get('desconto_pct_m2', 0.0))
+    pct = max(0.0, min(100.0, pct))
+    preco_desc = preco_orig * (1 - pct / 100.0) if preco_orig > 0 else 0.0
+    st.session_state['preco_vista_descontado_m2'] = round(preco_desc, 2)
+    st.session_state['desconto_pct_m2'] = round(pct, 4)
+
+def on_change_preco_vista_descontado_m2():
+    st.session_state['last_changed_desconto_m2'] = 'preco'
+    preco_orig = float(st.session_state.get('valor_a_vista_m2', 0.0))
+    preco_desc = float(st.session_state.get('preco_vista_descontado_m2', 0.0))
+    preco_desc = max(0.0, preco_desc)
+    if preco_orig > 0 and preco_desc > preco_orig:
+        preco_desc = preco_orig
+    pct = (1 - (preco_desc / preco_orig)) * 100.0 if preco_orig > 0 else 0.0
+    pct = max(0.0, min(100.0, pct))
+    st.session_state['desconto_pct_m2'] = round(pct, 4)
+    st.session_state['preco_vista_descontado_m2'] = round(preco_desc, 2)
+
 # ------------------------------
 # BLOCO MODELO 1 (mantido com gráficos e HUD originais)
 # ------------------------------
@@ -96,6 +155,11 @@ if modo.startswith("Modelo 1"):
         "Preço do Produto (R$)",
         min_value=0.0, value=549.90, step=0.01, format="%.2f", key="valor_a_vista_m1"
     )
+
+    # If preco_vista_descontado_m1 is None (first run), initialize it using valor_a_vista and desconto_pct_m1
+    if st.session_state.get('preco_vista_descontado_m1') is None:
+        preco_init = float(valor_a_vista) * (1 - float(st.session_state.get('desconto_pct_m1', 5.0)) / 100.0)
+        st.session_state['preco_vista_descontado_m1'] = round(preco_init, 2)
 
     entrada_inicial = st.number_input(
         "Entrada / pagamento no período 0 (R$) - se houver",
@@ -112,12 +176,50 @@ if modo.startswith("Modelo 1"):
         value=False, key="tem_desconto_vista_m1"
     )
 
+    # DESCONTO: dois campos sincronizados por callbacks - percentual e preco descontado
     desconto_pct = 0.0
+    preco_vista_descontado = valor_a_vista
     if tem_desconto_vista:
+        st.write("Informe o desconto em percentual ou diretamente o preço já descontado. A última alteração domina.")
+
         desconto_pct = st.number_input(
             "Valor do desconto à vista (%) - Modelo 1",
-            min_value=0.0, max_value=100.0, value=5.0, step=0.01, format="%.2f", key="desconto_pct_m1"
+            min_value=0.0, max_value=100.0,
+            value=float(st.session_state.get('desconto_pct_m1', 5.0)),
+            step=0.01, format="%.4f",
+            key="desconto_pct_m1",
+            on_change=on_change_desconto_pct_m1
         )
+
+        # preco inicial do widget pega o session_state (já inicializado acima)
+        preco_vista_descontado = st.number_input(
+            "Preço à vista (descontado) (R$) - Modelo 1",
+            min_value=0.0,
+            value=float(st.session_state.get('preco_vista_descontado_m1', round(float(valor_a_vista) * (1 - desconto_pct / 100.0), 2))),
+            step=0.01, format="%.2f",
+            key="preco_vista_descontado_m1",
+            on_change=on_change_preco_vista_descontado_m1
+        )
+
+        # Determinar qual foi a última alteração e usar valores sincronizados sem reescrever chaves fora do callback
+        last = st.session_state.get('last_changed_desconto_m1')
+        if last == 'preco':
+            preco_vista_descontado = float(st.session_state['preco_vista_descontado_m1'])
+            desconto_pct = float(st.session_state['desconto_pct_m1'])
+        else:
+            desconto_pct = float(st.session_state['desconto_pct_m1'])
+            preco_vista_descontado = float(st.session_state['preco_vista_descontado_m1'])
+
+        # Normalizações simples
+        preco_orig = float(valor_a_vista)
+        if preco_orig > 0:
+            preco_vista_descontado = max(0.0, min(preco_vista_descontado, preco_orig))
+            desconto_pct = max(0.0, min(desconto_pct, 100.0))
+
+    else:
+        # checkbox desmarcado: manter session_state valores, mas local vars set
+        desconto_pct = 0.0
+        preco_vista_descontado = valor_a_vista
 
     taxa_opcao = st.selectbox(
         "Tipo da taxa de investimento / juros",
@@ -130,7 +232,6 @@ if modo.startswith("Modelo 1"):
     taxa_mensal_final = 0.0
 
     if taxa_opcao in ["SELIC (anual)", "CDI (anual)"]:
-        # number_input and slider kept in sync; last user action decides
         taxa_anual = st.number_input(
             f"Informe a taxa anual para {taxa_opcao.split()[0]} (%)",
             min_value=0.0, max_value=200.0,
@@ -145,10 +246,9 @@ if modo.startswith("Modelo 1"):
             step=0.01, key="taxa_anual_slider_m1", on_change=on_change_taxa_anual_slider_m1
         )
         last = st.session_state.get('last_changed_taxa_anual_m1')
-        if last == 'slider':
-            taxa_anual_usada = float(st.session_state['taxa_anual_slider_m1'])
-        else:
-            taxa_anual_usada = float(st.session_state['taxa_anual_m1'])
+        taxa_anual_usada = float(st.session_state['taxa_anual_slider_m1']) if last == 'slider' else float(st.session_state['taxa_anual_m1'])
+        if taxa_opcao in ["SELIC (anual)"]:
+            taxa_anual_usada -= 0.1
         taxa_mensal_final = convert_annual_to_monthly_effective(taxa_anual_usada)
         taxa_anual = taxa_anual_usada
     else:
@@ -166,10 +266,7 @@ if modo.startswith("Modelo 1"):
             step=0.01, key="taxa_mensal_slider_m1", on_change=on_change_taxa_mensal_slider_m1
         )
         last_m = st.session_state.get('last_changed_taxa_mensal_m1')
-        if last_m == 'slider':
-            taxa_mensal_percent_usada = float(st.session_state['taxa_mensal_slider_m1'])
-        else:
-            taxa_mensal_percent_usada = float(st.session_state['taxa_mensal_manual_m1'])
+        taxa_mensal_percent_usada = float(st.session_state['taxa_mensal_slider_m1']) if last_m == 'slider' else float(st.session_state['taxa_mensal_manual_m1'])
         taxa_mensal_final = taxa_mensal_percent_usada / 100.0
         taxa_mensal_manual = taxa_mensal_percent_usada
 
@@ -180,7 +277,7 @@ if modo.startswith("Modelo 1"):
     st.write(f"- **Número de prestações:** {int(num_prestacoes):.0f}")
     st.write(f"- **Possui desconto à vista:** {'Sim' if tem_desconto_vista else 'Não'}")
     if tem_desconto_vista:
-        st.write(f"- **Desconto à vista:** {desconto_pct:.2f} % → Preço à vista com desconto: R$ {valor_a_vista * (1 - desconto_pct / 100.0):.2f}")
+        st.write(f"- **Desconto à vista:** {desconto_pct:.2f} % → Preço à vista com desconto: R$ {preco_vista_descontado:.2f}")
     st.write(f"- **Tipo de taxa selecionada:** {taxa_opcao}")
     if taxa_opcao in ["SELIC (anual)", "CDI (anual)"]:
         st.write(f"- **Taxa anual usada:** {taxa_anual:.4f} %")
@@ -209,12 +306,10 @@ if modo.startswith("Modelo 1"):
             fluxo[t] = float(valor_manual)
 
     # Fluxo vista descontada Modelo 1 (permanecer como pagamento no período 0)
-    preco_vista_descontado = valor_a_vista * (1 - (desconto_pct or 0.0) / 100.0)
     fluxo_vista_descontada = {}
-    if tem_desconto_vista:
-        fluxo_vista_descontada[0] = float(preco_vista_descontado)
-        for t in range(1, num_periodos):
-            fluxo_vista_descontada[t] = 0.0
+    fluxo_vista_descontada[0] = float(preco_vista_descontado)
+    for t in range(1, num_periodos):
+        fluxo_vista_descontada[t] = 0.0
 
     # Plotagem Modelo 1: vetores do VP na data focal selecionada
     def plot_vetores_vp_modelo1(fluxo_dict, taxa_mensal, fluxo_vista_constante):
@@ -235,7 +330,7 @@ if modo.startswith("Modelo 1"):
         x_principal = data_focal - offset if vp_vista is not None else data_focal
         x_vista = data_focal + offset if vp_vista is not None else None
 
-        color_principal = 'green' if vp_principal >= 0 else 'red'
+        color_principal = 'red' if vp_principal >= vp_vista else 'green'
         fig.add_trace(go.Scatter(
             x=[x_principal, x_principal],
             y=[0, vp_principal],
@@ -251,7 +346,7 @@ if modo.startswith("Modelo 1"):
 
         valores_para_range = [vp_principal]
         if vp_vista is not None:
-            color_vista = 'blue'
+            color_vista = 'red' if vp_vista >= vp_principal else 'green'
             fig.add_trace(go.Scatter(
                 x=[x_vista, x_vista],
                 y=[0, vp_vista],
@@ -285,7 +380,7 @@ if modo.startswith("Modelo 1"):
         st.plotly_chart(fig, use_container_width=True)
         return vp_principal, vp_vista, data_focal
 
-    vp_principal_m1, vp_vista_m1, data_focal_m1 = plot_vetores_vp_modelo1(fluxo, taxa_mensal_final, fluxo_vista_descontada if tem_desconto_vista else None)
+    vp_principal_m1, vp_vista_m1, data_focal_m1 = plot_vetores_vp_modelo1(fluxo, taxa_mensal_final, fluxo_vista_descontada)
 
     # Tabela e sumários Modelo 1
     st.subheader("Tabela de fluxos e Valores Presentes por período")
@@ -298,11 +393,10 @@ if modo.startswith("Modelo 1"):
             "Fluxo (R$)": round(valor_fluxo, 2),
             f"VP na data {data_focal_m1} (R$)": round(vp_fluxo, 2)
         }
-        if tem_desconto_vista:
-            valor_vista_const = fluxo_vista_descontada.get(t, 0.0)
-            vp_vista_fluxo = valor_vista_const / ((1 + (taxa_mensal_final or 0.0)) ** (t - data_focal_m1))
-            row["Valores a vista sem desconto (R$)"] = round(valor_vista_const, 2)
-            row[f"Valores a vista com desconto {data_focal_m1} (R$)"] = round(vp_vista_fluxo, 2)
+        valor_vista_const = fluxo_vista_descontada.get(t, 0.0)
+        vp_vista_fluxo = valor_vista_const / ((1 + (taxa_mensal_final or 0.0)) ** (t - data_focal_m1))
+        row["Valores a vista sem desconto (R$)"] = round(valor_vista_const, 2)
+        row[f"Valores a vista com desconto {data_focal_m1} (R$)"] = round(vp_vista_fluxo, 2)
         rows.append(row)
     df = pd.DataFrame(rows)
     st.dataframe(df.style.format("{:.2f}"))
@@ -310,15 +404,14 @@ if modo.startswith("Modelo 1"):
     vp_total = valor_presente(fluxo, taxa_mensal_final, data_focal_m1)
     st.markdown("---")
     st.write(f"Valor Presente parcelado na data {data_focal_m1}: **R$ {vp_total:.2f}**")
-    if tem_desconto_vista:
-        vp_total_vista = valor_presente(fluxo_vista_descontada, taxa_mensal_final, data_focal_m1)
-        st.write(f"Valor Presente a vista com desconto na data {data_focal_m1}: **R$ {vp_total_vista:.2f}**")
-        diff = vp_total - vp_total_vista
-        pct = (diff / vp_total_vista * 100.0) if vp_total_vista != 0 else float('inf')
-        st.write(f"Diferença (parcelado - vista com desconto): R$ {diff:.2f} ({pct:.2f} %)")
-        diferenca = (valor_a_vista - vp_total)
-        desc = (diferenca / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
-        st.write(f'Diferença (Preço original - VP Parcelado): R$ {diferenca:.2f} ({desc:.2f} %)')
+    vp_total_vista = valor_presente(fluxo_vista_descontada, taxa_mensal_final, data_focal_m1)
+    st.write(f"Valor Presente a vista com desconto na data {data_focal_m1}: **R$ {vp_total_vista:.2f}**")
+    diff = vp_total - vp_total_vista
+    pct = (diff / vp_total_vista * 100.0) if vp_total_vista != 0 else float('inf')
+    st.write(f"Diferença (parcelado - vista com desconto): R$ {diff:.2f} ({pct:.2f} %)")
+    diferenca = (valor_a_vista - vp_total)
+    desc = (diferenca / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
+    st.write(f'Diferença (Preço original - VP Parcelado): R$ {diferenca:.2f} ({desc:.2f} %)')
 
 # ------------------------------
 # BLOCO MODELO 2
@@ -332,17 +425,50 @@ else:
         min_value=0.0, value=549.90, step=0.01, format="%.2f", key="valor_a_vista_m2"
     )
 
+    # Initialize preco_vista_descontado_m2 if None
+    if st.session_state.get('preco_vista_descontado_m2') is None:
+        preco_init2 = float(valor_a_vista2) * (1 - float(st.session_state.get('desconto_pct_m2', 5.0)) / 100.0)
+        st.session_state['preco_vista_descontado_m2'] = round(preco_init2, 2)
+
     tem_desconto_vista2 = st.checkbox(
         "Produto possui desconto à vista?",
         value=False, key="tem_desconto_vista_m2"
     )
 
     desconto_pct2 = 0.0
+    preco_vista_descontado2 = valor_a_vista2
     if tem_desconto_vista2:
         desconto_pct2 = st.number_input(
             "Valor do desconto à vista (%)",
-            min_value=0.0, max_value=100.0, value=5.0, step=0.01, format="%.2f", key="desconto_pct_m2"
+            min_value=0.0, max_value=100.0,
+            value=float(st.session_state.get('desconto_pct_m2', 5.0)),
+            step=0.01, format="%.4f",
+            key="desconto_pct_m2", on_change=on_change_desconto_pct_m2
         )
+
+        preco_vista_descontado2 = st.number_input(
+            "Preço à vista (descontado) (R$)",
+            min_value=0.0,
+            value=float(st.session_state.get('preco_vista_descontado_m2', round(float(valor_a_vista2) * (1 - desconto_pct2 / 100.0), 2))),
+            step=0.01, format="%.2f",
+            key="preco_vista_descontado_m2", on_change=on_change_preco_vista_descontado_m2
+        )
+
+        last2 = st.session_state.get('last_changed_desconto_m2')
+        if last2 == 'preco':
+            preco_vista_descontado2 = float(st.session_state['preco_vista_descontado_m2'])
+            desconto_pct2 = float(st.session_state['desconto_pct_m2'])
+        else:
+            desconto_pct2 = float(st.session_state['desconto_pct_m2'])
+            preco_vista_descontado2 = float(st.session_state['preco_vista_descontado_m2'])
+
+        preco_orig2 = float(valor_a_vista2)
+        if preco_orig2 > 0:
+            preco_vista_descontado2 = max(0.0, min(preco_vista_descontado2, preco_orig2))
+            desconto_pct2 = max(0.0, min(desconto_pct2, 100.0))
+    else:
+        desconto_pct2 = 0.0
+        preco_vista_descontado2 = valor_a_vista2
 
     entrada_inicial2 = st.number_input(
         "Entrada (R$) - se houver",
@@ -380,10 +506,9 @@ else:
             step=0.01, key="taxa_anual_slider_m2", on_change=on_change_taxa_anual_slider_m2
         )
         last2 = st.session_state.get('last_changed_taxa_anual_m2')
-        if last2 == 'slider':
-            taxa_anual_usada2 = float(st.session_state['taxa_anual_slider_m2'])
-        else:
-            taxa_anual_usada2 = float(st.session_state['taxa_anual_m2'])
+        taxa_anual_usada2 = float(st.session_state['taxa_anual_slider_m2']) if last2 == 'slider' else float(st.session_state['taxa_anual_m2'])
+        if taxa_opcao2 in ["SELIC (anual)"]:
+            taxa_anual_usada2 -= 0.1
         taxa_mensal_final2 = convert_annual_to_monthly_effective(taxa_anual_usada2)
         taxa_anual2 = taxa_anual_usada2
     else:
@@ -400,10 +525,7 @@ else:
             step=0.01, key="taxa_mensal_slider_m2", on_change=on_change_taxa_mensal_slider_m2
         )
         last_m2 = st.session_state.get('last_changed_taxa_mensal_m2')
-        if last_m2 == 'slider':
-            taxa_mensal_percent_usada2 = float(st.session_state['taxa_mensal_slider_m2'])
-        else:
-            taxa_mensal_percent_usada2 = float(st.session_state['taxa_mensal_manual_m2'])
+        taxa_mensal_percent_usada2 = float(st.session_state['taxa_mensal_slider_m2']) if last_m2 == 'slider' else float(st.session_state['taxa_mensal_manual_m2'])
         taxa_mensal_final2 = taxa_mensal_percent_usada2 / 100.0
         taxa_mensal_manual2 = taxa_mensal_percent_usada2
 
@@ -412,7 +534,7 @@ else:
     st.write(f"- **Preço do Produto:** R$ {valor_a_vista2:.2f}")
     st.write(f"- **Possui desconto à vista:** {'Sim' if tem_desconto_vista2 else 'Não'}")
     if tem_desconto_vista2:
-        st.write(f"- **Desconto à vista:** {desconto_pct2:.2f} % → Preço à vista com desconto: R$ {valor_a_vista2 * (1 - desconto_pct2 / 100.0):.2f}")
+        st.write(f"- **Desconto à vista:** {desconto_pct2:.2f} % → Preço à vista com desconto: R$ {preco_vista_descontado2:.2f}")
     st.write(f"- **Entrada no período 0 (opcional):** R$ {entrada_inicial2:.2f}")
     st.write(f"- **Número máximo de prestações (limite):** {int(num_prestacoes_max2)}")
     st.write(f"- **Tipo de taxa selecionada:** {taxa_opcao2}")
@@ -446,9 +568,9 @@ else:
         fluxo_parcelado_2[t] = parcela_valor2
 
     if tem_desconto_vista2:
-        preco_vista_descontado2 = valor_a_vista2 * (1 - desconto_pct2 / 100.0)
+        preco_vista_descontado2 = float(preco_vista_descontado2)
     else:
-        preco_vista_descontado2 = valor_a_vista2
+        preco_vista_descontado2 = float(valor_a_vista2)
 
     fluxo_vista_descontada_2 = {0: float(preco_vista_descontado2)}
     for t in range(1, num_periodos_2):
@@ -470,7 +592,7 @@ else:
     x_parcelado = -offset_x
     x_vista = offset_x
 
-    color_parc = "green" if vp_parcelado_data0 >= 0 else "red"
+    color_parc = "red" if vp_parcelado_data0 >= vp_vista_data0 else "green"
     fig.add_trace(
         go.Scatter(
             x=[x_parcelado, x_parcelado],
@@ -486,7 +608,7 @@ else:
         )
     )
 
-    color_vista = "blue"
+    color_vista = "red" if vp_vista_data0 >= vp_parcelado_data0 else "green"
     fig.add_trace(
         go.Scatter(
             x=[x_vista, x_vista],
@@ -543,5 +665,5 @@ else:
     pct2 = (diff2 / vp_vista_data0 * 100.0) if vp_vista_data0 != 0 else float("inf")
     st.write(f"Diferença (parcelado - vista): R$ {diff2:.2f} ({pct2:.2f} %)")
     diferenca2 = valor_a_vista2 - vp_parcelado_data0
-    desc2 = (diferenca2 / valor_a_vista2 * 100.0) if valor_a_vista2 != 0 else float("inf")
+    desc2 = (diferenca2 / valor_a_vista2 * 100.0) if valor_a_vista2 != 0 else float('inf')
     st.write(f"Diferença (preço original - VP parcelado): R$ {diferenca2:.2f} ({desc2:.2f} %)")
