@@ -11,22 +11,30 @@ st.markdown("---")
 # Funções comuns
 # ------------------------------
 def convert_annual_to_monthly_effective(taxa_anual_pct: float) -> float:
-    """Converte taxa anual nominal para taxa efetiva mensal (aprox. 30/360)."""
     try:
         return (1 + taxa_anual_pct / 100.0) ** (30.0 / 360.0) - 1.0
     except Exception:
         return 0.0
 
 def valor_presente_data0(fluxo_dict, taxa_mensal):
-    """Calcula VP na data 0 para um dicionário {t: fluxo} com taxa mensal efetiva."""
     vp = 0.0
     taxa = taxa_mensal or 0.0
     for t, c in fluxo_dict.items():
         vp += c / ((1 + taxa) ** t)
     return vp
 
+def calcular_aliquota_ir(dias_aplicados: int) -> float:
+    if dias_aplicados <= 180:
+        return 0.225
+    elif dias_aplicados <= 360:
+        return 0.20
+    elif dias_aplicados <= 720:
+        return 0.175
+    else:
+        return 0.15
+
 # ------------------------------
-# Inicializações de estado (chaves genéricas)
+# Inicializações de estado
 # ------------------------------
 st.session_state.setdefault('taxa_anual', 15.0)
 st.session_state.setdefault('taxa_anual_slider', 15.0)
@@ -59,7 +67,7 @@ def on_change_taxa_mensal_slider():
     st.session_state['taxa_mensal_manual'] = float(st.session_state['taxa_mensal_slider'])
 
 # ------------------------------
-# Callbacks de desconto (percentual ↔ preço à vista descontado)
+# Callbacks de desconto
 # ------------------------------
 def on_change_desconto_pct():
     st.session_state['last_changed_desconto'] = 'pct'
@@ -92,15 +100,11 @@ valor_a_vista = st.number_input(
     min_value=0.0, value=549.90, step=0.01, format="%.2f", key="valor_a_vista"
 )
 
-# Inicializa preço à vista descontado na primeira execução
 if st.session_state.get('preco_vista_descontado') is None:
     preco_init = float(valor_a_vista) * (1 - float(st.session_state.get('desconto_pct', 5.0)) / 100.0)
     st.session_state['preco_vista_descontado'] = round(preco_init, 2)
 
-tem_desconto_vista = st.checkbox(
-    "Produto possui desconto à vista?",
-    value=False, key="tem_desconto_vista"
-)
+tem_desconto_vista = st.checkbox("Produto possui desconto à vista?", value=False, key="tem_desconto_vista")
 
 desconto_pct = 0.0
 preco_vista_descontado = valor_a_vista
@@ -132,11 +136,6 @@ if tem_desconto_vista:
     else:
         desconto_pct = float(st.session_state['desconto_pct'])
         preco_vista_descontado = float(st.session_state['preco_vista_descontado'])
-
-    preco_orig = float(valor_a_vista)
-    if preco_orig > 0:
-        preco_vista_descontado = max(0.0, min(preco_vista_descontado, preco_orig))
-        desconto_pct = max(0.0, min(desconto_pct, 100.0))
 else:
     desconto_pct = 0.0
     preco_vista_descontado = valor_a_vista
@@ -176,9 +175,9 @@ if taxa_opcao in ["SELIC (anual)", "CDI (anual)"]:
     )
     last_ta = st.session_state.get('last_changed_taxa_anual')
     taxa_anual_usada = float(st.session_state['taxa_anual_slider']) if last_ta == 'slider' else float(st.session_state['taxa_anual'])
-    # Mantém o ajuste que você vinha usando para SELIC, se for intencional
-    if taxa_opcao in ["SELIC (anual)"]:
-        taxa_anual_usada -= 0.1
+    # Regra: SELIC informada → usa CDI (SELIC - 10 p.p.)
+    if taxa_opcao == "SELIC (anual)":
+        taxa_anual_usada -= 10.0
     taxa_mensal_final = convert_annual_to_monthly_effective(taxa_anual_usada)
     taxa_anual = taxa_anual_usada
 else:
@@ -196,11 +195,36 @@ else:
     )
     last_tm = st.session_state.get('last_changed_taxa_mensal')
     taxa_mensal_percent_usada = float(st.session_state['taxa_mensal_slider']) if last_tm == 'slider' else float(st.session_state['taxa_mensal_manual'])
+    # Mensal: aplica diretamente sem conversão
     taxa_mensal_final = taxa_mensal_percent_usada / 100.0
     taxa_mensal_manual = taxa_mensal_percent_usada
 
 # ------------------------------
-# Resumo
+# Informações sobre as taxas
+# ------------------------------
+mostrar_info_taxas = st.checkbox("Informações sobre as taxas")
+if mostrar_info_taxas:
+    st.info(
+        "📌 **Regras sobre as taxas utilizadas:**\n\n"
+        "- As taxas anuais utilizadas são sempre referentes ao **CDI**.\n"
+        "- O **CDI** é notoriamente **10 pontos percentuais abaixo da SELIC anual**.\n"
+        "- Portanto, quando você seleciona **SELIC (anual)** e insere a taxa atual da SELIC, "
+        "os cálculos são realizados considerando **10 pontos percentuais a menos**.\n"
+        "- Quando a opção **CDI (anual)** é utilizada, a taxa inserida é aplicada diretamente, "
+        "pois já corresponde ao CDI real.\n"
+        "- Para a opção **Manual (mensal)**, a taxa inserida é aplicada diretamente aos cálculos, "
+        "sem conversão anual-mensal."
+    )
+
+# ------------------------------
+# Considerar Imposto de Renda?
+# ------------------------------
+considerar_ir = st.checkbox("Considerar Imposto de Renda?", value=False)
+
+st.markdown("---")
+
+# ------------------------------
+# Resumo das entradas
 # ------------------------------
 st.markdown("### Resumo das entradas")
 st.write(f"- **Preço do produto:** R$ {valor_a_vista:.2f}")
@@ -211,10 +235,11 @@ st.write(f"- **Entrada no período 0 (opcional):** R$ {entrada_inicial:.2f}")
 st.write(f"- **Número máximo de prestações (limite):** {int(num_prestacoes_max)}")
 st.write(f"- **Tipo de taxa selecionada:** {taxa_opcao}")
 if taxa_opcao in ["SELIC (anual)", "CDI (anual)"]:
-    st.write(f"- **Taxa anual usada:** {taxa_anual:.4f} %")
+    st.write(f"- **Taxa anual usada (base CDI):** {taxa_anual:.4f} %")
 else:
     st.write(f"- **Taxa mensal usada (manual):** {taxa_mensal_manual:.4f} %")
 st.write(f"- **Taxa mensal efetiva usada nas comparações:** {(taxa_mensal_final or 0.0) * 100:.6f} %")
+st.write(f"- **Imposto de Renda considerado:** {'Sim' if considerar_ir else 'Não'}")
 
 st.markdown("---")
 
@@ -232,17 +257,38 @@ n_atual = st.slider(
 )
 
 # ------------------------------
-# Construção dos fluxos
+# Construção dos fluxos (com IR opcional)
 # ------------------------------
 num_periodos = int(n_atual) + 1
 fluxo_parcelado = {}
 valor_restante = max(0.0, valor_a_vista - entrada_inicial)
 parcela_valor = valor_restante / float(n_atual) if n_atual > 0 else 0.0
 
+# período 0 (entrada)
 fluxo_parcelado[0] = float(entrada_inicial)
-for t in range(1, num_periodos):
-    fluxo_parcelado[t] = parcela_valor
 
+# períodos 1..n: retirada mensal para pagar a parcela
+for t in range(1, num_periodos):
+    if considerar_ir:
+        # dias aplicados aproximados (30 dias por mês)
+        dias_aplicados = t * 30
+        aliquota = calcular_aliquota_ir(dias_aplicados)
+
+        # rendimento do mês t sobre o montante necessário para pagar a parcela
+        # ideia: parcela_valor é o valor líquido desejado; IR incide sobre o rendimento
+        # aproximamos o rendimento do período como: valor_aplicado * taxa_mensal_final
+        # para garantir parcela líquida, o bruto precisa cobrir IR sobre esse rendimento
+        valor_aplicado = parcela_valor / ((1 + taxa_mensal_final) ** t)
+        rendimento_estimado = parcela_valor - valor_aplicado
+        imposto = max(0.0, rendimento_estimado * aliquota)
+
+        # valor bruto retirado (parcela + IR sobre rendimento)
+        valor_bruto = parcela_valor + imposto
+        fluxo_parcelado[t] = valor_bruto
+    else:
+        fluxo_parcelado[t] = parcela_valor
+
+# fluxo à vista (descontado ou preço original)
 preco_vista_descontado = float(preco_vista_descontado) if tem_desconto_vista else float(valor_a_vista)
 fluxo_vista_descontada = {0: float(preco_vista_descontado)}
 for t in range(1, num_periodos):
@@ -309,7 +355,7 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # ------------------------------
-# Tabela e sumários
+# Tabela e sumários (enxuta)
 # ------------------------------
 st.subheader("Detalhes")
 df_rows = []
