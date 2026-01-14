@@ -177,7 +177,7 @@ if taxa_opcao in ["SELIC (anual)", "CDI (anual)"]:
     taxa_anual_usada = float(st.session_state['taxa_anual_slider']) if last_ta == 'slider' else float(st.session_state['taxa_anual'])
     # Regra: SELIC informada → usa CDI (SELIC - 10 p.p.)
     if taxa_opcao == "SELIC (anual)":
-        taxa_anual_usada -= 10.0
+        taxa_anual_usada -= 0.1
     taxa_mensal_final = convert_annual_to_monthly_effective(taxa_anual_usada)
     taxa_anual = taxa_anual_usada
 else:
@@ -207,9 +207,9 @@ if mostrar_info_taxas:
     st.info(
         "📌 **Regras sobre as taxas utilizadas:**\n\n"
         "- As taxas anuais utilizadas são sempre referentes ao **CDI**.\n"
-        "- O **CDI** é notoriamente **10 pontos percentuais abaixo da SELIC anual**.\n"
+        "- O **CDI** é notoriamente **0,1 pontos percentuais abaixo da SELIC anual**.\n"
         "- Portanto, quando você seleciona **SELIC (anual)** e insere a taxa atual da SELIC, "
-        "os cálculos são realizados considerando **10 pontos percentuais a menos**.\n"
+        "os cálculos são realizados considerando **0,1 pontos percentuais a menos**.\n"
         "- Quando a opção **CDI (anual)** é utilizada, a taxa inserida é aplicada diretamente, "
         "pois já corresponde ao CDI real.\n"
         "- Para a opção **Manual (mensal)**, a taxa inserida é aplicada diretamente aos cálculos, "
@@ -217,9 +217,9 @@ if mostrar_info_taxas:
     )
 
 # ------------------------------
-# Considerar Imposto de Renda?
+# Considerar Imposto de Renda
 # ------------------------------
-considerar_ir = st.checkbox("Considerar Imposto de Renda?", value=False)
+considerar_ir = st.checkbox("Considerar Imposto de Renda", value=False)
 
 st.markdown("---")
 
@@ -386,3 +386,4 @@ st.write(f"Diferença (parcelado − à vista): R$ {diff:.2f} ({pct:.2f} %)")
 diferenca_preco = valor_a_vista - vp_parcelado_data0
 desc_pct = (diferenca_preco / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
 st.write(f"Diferença (preço original − VP parcelado): R$ {diferenca_preco:.2f} ({desc_pct:.2f} %)")
+
