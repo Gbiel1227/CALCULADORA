@@ -112,7 +112,7 @@ if mostrar_ajuda:
         "- Depois, use o slider para escolher o número de prestações atual.\n\n"
         "**5. Tipo de taxa de investimento / juros**\n"
         "- **SELIC (anual):** ao inserir a taxa SELIC, o cálculo considera automaticamente o CDI, "
-        "que é 10 pontos percentuais abaixo.\n"
+        "que é 0,1 pontos percentuais abaixo.\n"
         "- **CDI (anual):** a taxa inserida já corresponde ao CDI real.\n"
         "- **Manual (mensal):** a taxa mensal informada é aplicada diretamente, sem conversão.\n\n"
         "**6. Informações sobre as taxas**\n"
@@ -425,5 +425,6 @@ st.write(f"Diferença (parcelado − à vista): R$ {diff:.2f} ({pct:.2f} %)")
 diferenca_preco = valor_a_vista - vp_parcelado_data0
 desc_pct = (diferenca_preco / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
 st.write(f"Diferença (preço original − VP parcelado): R$ {diferenca_preco:.2f} ({desc_pct:.2f} %)")
+
 
 
