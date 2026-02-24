@@ -91,6 +91,45 @@ def on_change_preco_vista_descontado():
     st.session_state['preco_vista_descontado'] = round(preco_desc, 2)
 
 # ------------------------------
+# Ajuda / Tutorial
+# ------------------------------
+mostrar_ajuda = st.checkbox("Ajuda")
+if mostrar_ajuda:
+    st.info(
+        "📖 **Tutorial de uso da ferramenta**\n\n"
+        "Esta aplicação compara o pagamento **à vista** com o pagamento **parcelado**, "
+        "considerando taxas de juros e, opcionalmente, o Imposto de Renda sobre retiradas.\n\n"
+        "**1. Preço do produto**\n"
+        "- Informe o valor total do produto.\n\n"
+        "**2. Desconto à vista**\n"
+        "- Se o produto tiver desconto à vista, marque a opção.\n"
+        "- Você pode informar o desconto em percentual ou diretamente o preço já descontado. "
+        "Os dois campos se atualizam automaticamente.\n\n"
+        "**3. Entrada**\n"
+        "- Caso haja um valor pago no ato da compra (entrada), informe-o.\n\n"
+        "**4. Número máximo de prestações**\n"
+        "- Defina o limite de parcelas que deseja analisar.\n"
+        "- Depois, use o slider para escolher o número de prestações atual.\n\n"
+        "**5. Tipo de taxa de investimento / juros**\n"
+        "- **SELIC (anual):** ao inserir a taxa SELIC, o cálculo considera automaticamente o CDI, "
+        "que é 10 pontos percentuais abaixo.\n"
+        "- **CDI (anual):** a taxa inserida já corresponde ao CDI real.\n"
+        "- **Manual (mensal):** a taxa mensal informada é aplicada diretamente, sem conversão.\n\n"
+        "**6. Informações sobre as taxas**\n"
+        "- Marque esta opção para visualizar um resumo das regras de cálculo das taxas.\n\n"
+        "**7. Considerar Imposto de Renda**\n"
+        "- Se marcado, o fluxo de retiradas mensais considera o IR sobre os rendimentos, "
+        "seguindo a tabela regressiva (22,5% até 180 dias, 20% até 360 dias, 17,5% até 720 dias, 15% acima de 720 dias).\n\n"
+        "**8. Gráfico comparativo**\n"
+        "- O gráfico mostra dois vetores: o valor presente do pagamento parcelado e o valor presente do pagamento à vista.\n"
+        "- O maior valor aparece em verde e o menor em vermelho, facilitando a comparação.\n\n"
+        "**9. Tabela de detalhes**\n"
+        "- Exibe os fluxos de caixa e valores presentes por período, de forma resumida.\n\n"
+        "👉 Use estas informações para decidir se compensa pagar à vista ou parcelado, "
+        "considerando taxas de juros e impostos."
+    )
+
+# ------------------------------
 # Entradas principais
 # ------------------------------
 st.header("Configurações")
@@ -104,7 +143,7 @@ if st.session_state.get('preco_vista_descontado') is None:
     preco_init = float(valor_a_vista) * (1 - float(st.session_state.get('desconto_pct', 5.0)) / 100.0)
     st.session_state['preco_vista_descontado'] = round(preco_init, 2)
 
-tem_desconto_vista = st.checkbox("Produto possui desconto à vista?", value=False, key="tem_desconto_vista")
+tem_desconto_vista = st.checkbox("Produto possui desconto à vista", value=False, key="tem_desconto_vista")
 
 desconto_pct = 0.0
 preco_vista_descontado = valor_a_vista
@@ -386,4 +425,5 @@ st.write(f"Diferença (parcelado − à vista): R$ {diff:.2f} ({pct:.2f} %)")
 diferenca_preco = valor_a_vista - vp_parcelado_data0
 desc_pct = (diferenca_preco / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
 st.write(f"Diferença (preço original − VP parcelado): R$ {diferenca_preco:.2f} ({desc_pct:.2f} %)")
+
 
