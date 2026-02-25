@@ -147,22 +147,23 @@ tem_desconto_vista = st.checkbox("Produto possui desconto à vista", value=False
 
 desconto_pct = 0.0
 preco_vista_descontado = valor_a_vista
-
 if tem_desconto_vista:
+    st.write("Informe o desconto em percentual ou diretamente o preço já descontado. A última alteração domina.")
+
     desconto_pct = st.number_input(
-    "Valor do desconto à vista (%)",
-    min_value=0.0, max_value=100.0,
-    value=float(st.session_state.get('desconto_pct', 0.0)),
-    step=0.01, format="%.4f",
-    key="desconto_pct",
-    on_change=on_change_desconto_pct
+        "Valor do desconto à vista (%)",
+        min_value=0.0, max_value=100.0,
+        value=float(st.session_state.get('desconto_pct', 0.0)),
+        step=0.01, format="%.4f",
+        key="desconto_pct",
+        on_change=on_change_desconto_pct
     )
 
-    # Recalcular sempre que desconto_pct mudar
+    # 🔧 Correção: recalcular sempre que desconto_pct mudar
     preco_vista_descontado_calc = round(float(valor_a_vista) * (1 - desconto_pct / 100.0), 2)
     if st.session_state.get('last_changed_desconto') != 'preco':
         st.session_state['preco_vista_descontado'] = preco_vista_descontado_calc
-    
+
     preco_vista_descontado = st.number_input(
         "Preço à vista (descontado) (R$)",
         min_value=0.0,
@@ -171,15 +172,7 @@ if tem_desconto_vista:
         key="preco_vista_descontado",
         on_change=on_change_preco_vista_descontado
     )
-    preco_vista_descontado = st.number_input(
-        "Preço à vista (descontado) (R$)",
-        min_value=0.0,
-        value=float(st.session_state.get('preco_vista_descontado', round(float(valor_a_vista) * (1 - desconto_pct / 100.0), 2))),
-        step=0.01, format="%.2f",
-        key="preco_vista_descontado",
-        on_change=on_change_preco_vista_descontado
-    )
-    
+
     last = st.session_state.get('last_changed_desconto')
     if last == 'preco':
         preco_vista_descontado = float(st.session_state['preco_vista_descontado'])
@@ -187,9 +180,9 @@ if tem_desconto_vista:
     else:
         desconto_pct = float(st.session_state['desconto_pct'])
         preco_vista_descontado = float(st.session_state['preco_vista_descontado'])
-    else:
-        desconto_pct = 0.0
-        preco_vista_descontado = valor_a_vista
+else:
+    desconto_pct = 0.0
+    preco_vista_descontado = valor_a_vista
 
 entrada_inicial = st.number_input(
     "Entrada (R$) — se houver",
@@ -442,12 +435,3 @@ diferenca_preco = valor_a_vista - vp_parcelado_data0
 desc_pct = (diferenca_preco / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
 st.write(f"Diferença (Preço original − VP parcelado): R$ {diferenca_preco:.2f} ({desc_pct:.2f} %)")
 st.write(f"Regra de bolso: O pagamento parcelado se torna mais vantajoso, de acordo com o número de parcelas, a partir do momento em que essa diferença percentual (Original - VP Parcelado) se torna maior que o desconto do produto à vista.")
-
-
-
-
-
-
-
-
-
