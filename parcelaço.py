@@ -429,7 +429,8 @@ st.write(f"Diferença (Parcelado − À vista): R$ {diff:.2f} ({pct:.2f} %)")
 diferenca_preco = valor_a_vista - vp_parcelado_data0
 desc_pct = (diferenca_preco / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
 st.write(f"Diferença (Preço original − VP parcelado): R$ {diferenca_preco:.2f} ({desc_pct:.2f} %)")
-st.write(f"Regra de bolso: O pagamento parcelado se torna mais vantajoso, de acordo com o número de parcelas, a partir do momento em que essa diferença percentual (Original - VP Parcelado) se torna maior que o desconto do produto à vista."
+st.write(f"Regra de bolso: O pagamento parcelado se torna mais vantajoso, de acordo com o número de parcelas, a partir do momento em que essa diferença percentual (Original - VP Parcelado) se torna maior que o desconto do produto à vista.")
+
 
 
 
