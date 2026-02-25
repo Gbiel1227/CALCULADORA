@@ -136,7 +136,7 @@ st.header("Configurações")
 
 valor_a_vista = st.number_input(
     "Preço do produto (R$)",
-    min_value=0.0, value=549.90, step=0.01, format="%.2f", key="valor_a_vista"
+    min_value=0.0, value=0.00, step=0.01, format="%.2f", key="valor_a_vista"
 )
 
 if st.session_state.get('preco_vista_descontado') is None:
@@ -153,7 +153,7 @@ if tem_desconto_vista:
     desconto_pct = st.number_input(
         "Valor do desconto à vista (%)",
         min_value=0.0, max_value=100.0,
-        value=float(st.session_state.get('desconto_pct', 5.0)),
+        value=float(st.session_state.get('desconto_pct', 0.0)),
         step=0.01, format="%.4f",
         key="desconto_pct",
         on_change=on_change_desconto_pct
@@ -252,7 +252,11 @@ if mostrar_info_taxas:
         "- Quando a opção **CDI (anual)** é utilizada, a taxa inserida é aplicada diretamente, "
         "pois já corresponde ao CDI real.\n"
         "- Para a opção **Manual (mensal)**, a taxa inserida é aplicada diretamente aos cálculos, "
-        "sem conversão anual-mensal."
+        "sem conversão anual-mensal.\n"
+        "A taxa SELIC é uma taxa anual média que é especulada diariamente.\n"
+        "Para consultá-la acesse Dados diários no site do Banco Central do Brasil,"
+        "e para mais informações acesse a página inicial.\n"
+        "Link: https://www.bcb.gov.br/estabilidadefinanceira/selicdadosdiarios "
     )
 
 # ------------------------------
@@ -416,15 +420,17 @@ df = pd.DataFrame(df_rows)
 st.dataframe(df.style.format("{:.2f}"))
 
 st.markdown("---")
-st.write(f"Valor Presente parcelado na data 0 com n={n_atual}: **R$ {vp_parcelado_data0:.2f}**")
-st.write(f"Valor Presente à vista na data 0: **R$ {vp_vista_data0:.2f}**")
+st.write(f"Valor Presente parcelado com {n_atual} prestações(ão): **R$ {vp_parcelado_data0:.2f}**")
+st.write(f"Valor à vista com desconto: **R$ {vp_vista_data0:.2f}**")
 diff = vp_parcelado_data0 - vp_vista_data0
 pct = (diff / vp_vista_data0 * 100.0) if vp_vista_data0 != 0 else float('inf')
-st.write(f"Diferença (parcelado − à vista): R$ {diff:.2f} ({pct:.2f} %)")
+st.write(f"Diferença (Parcelado − À vista): R$ {diff:.2f} ({pct:.2f} %)")
 
 diferenca_preco = valor_a_vista - vp_parcelado_data0
 desc_pct = (diferenca_preco / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
-st.write(f"Diferença (preço original − VP parcelado): R$ {diferenca_preco:.2f} ({desc_pct:.2f} %)")
+st.write(f"Diferença (Preço original − VP parcelado): R$ {diferenca_preco:.2f} ({desc_pct:.2f} %)")
+st.write(f"Regra de bolso: O pagamento parcelado se torna mais vantajoso, de acordo com o número de parcelas, a partir do momento em que essa diferença percentual (Original - VP Parcelado) se torna maior que o desconto do produto à vista."
+
 
 
 
