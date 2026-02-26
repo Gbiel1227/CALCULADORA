@@ -93,6 +93,7 @@ def on_change_preco_vista_descontado():
 # ------------------------------
 # Ajuda / Tutorial
 # ------------------------------
+st.write(f"Bem vindo a ferramenta Parcelaço! Marque a opção abaixo caso ainda não saiba como usar.")
 mostrar_ajuda = st.checkbox("Ajuda")
 if mostrar_ajuda:
     st.info(
@@ -122,7 +123,7 @@ if mostrar_ajuda:
         "seguindo a tabela regressiva (22,5% até 180 dias, 20% até 360 dias, 17,5% até 720 dias, 15% acima de 720 dias).\n\n"
         "**8. Gráfico comparativo**\n"
         "- O gráfico mostra dois vetores: o valor presente do pagamento parcelado e o valor presente do pagamento à vista.\n"
-        "- O maior valor aparece em verde e o menor em vermelho, facilitando a comparação.\n\n"
+        "- O menor valor aparece em verde e o maior em vermelho, facilitando a comparação.\n\n"
         "**9. Tabela de detalhes**\n"
         "- Exibe os fluxos de caixa e valores presentes por período, de forma resumida.\n\n"
         "👉 Use estas informações para decidir se compensa pagar à vista ou parcelado, "
@@ -435,3 +436,4 @@ diferenca_preco = valor_a_vista - vp_parcelado_data0
 desc_pct = (diferenca_preco / valor_a_vista * 100.0) if valor_a_vista != 0 else float('inf')
 st.write(f"Diferença (Preço original − VP parcelado): R$ {diferenca_preco:.2f} ({desc_pct:.2f} %)")
 st.write(f"Regra de bolso: O pagamento parcelado se torna mais vantajoso, de acordo com o número de parcelas, a partir do momento em que essa diferença percentual (Original - VP Parcelado) se torna maior que o desconto do produto à vista.")
+
